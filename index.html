@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MedPhys Reference</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><div class="logo">MP</div><div><h1>MedPhys Reference</h1><p>Radiation oncology and medical physics tables</p></div></div>
+  <nav><button class="nav active" data-view="reference">Reference</button><button class="nav" data-view="all">All tables</button><button class="nav" data-view="about">About</button></nav>
+</header>
+
+<main>
+<section id="reference" class="view active">
+  <div class="hero"><span class="eyebrow">Timmerman tables · August 2021</span><h2>Normal tissue dose constraints</h2><p>Search by organ or endpoint, compare fractionation schedules, and review volume limits, complications, and contouring guidance.</p></div>
+
+  <div class="card controls">
+    <label><span>Search</span><input id="searchInput" type="search" placeholder="Organ, endpoint, or tissue type"></label>
+    <label><span>Organ / structure</span><select id="organSelect"></select></label>
+    <label><span>Fraction schedule</span><select id="fractionSelect"><option value="all">All fractions</option></select></label>
+  </div>
+
+  <div class="summary">
+    <div class="card metric"><span>Selected structure</span><strong id="selectedOrgan">—</strong></div>
+    <div class="card metric"><span>Complication</span><strong id="selectedEndpoint">—</strong></div>
+    <div class="card metric"><span>Tissue type</span><strong id="selectedType">—</strong></div>
+  </div>
+
+  <section class="card chart-card">
+    <div class="card-head"><div><h3>Dose limit by number of fractions</h3><p>Volume and maximum-point dose constraints</p></div><div class="legend"><span><i class="green"></i>Volume max</span><span><i class="orange"></i>Max point dose</span></div></div>
+    <div id="volumeStrip" class="volume-strip"></div>
+    <div class="chart-wrap"><canvas id="doseChart" width="1000" height="430"></canvas><div id="chartTooltip" class="tooltip" hidden></div></div>
+  </section>
+
+  <section class="card table-card">
+    <div class="card-head"><div><h3>Constraint details</h3><p>Published values shown as entered in the source table</p></div><button id="downloadCsv" class="secondary">Download CSV</button></div>
+    <div class="table-scroll"><table><thead><tr><th>Fractions</th><th>Volume / critical volume</th><th>Volume max (Gy)</th><th>Max point dose / other</th><th>Endpoint</th></tr></thead><tbody id="detailRows"></tbody></table></div>
+  </section>
+
+  <section class="card contour"><h3>Contouring instructions</h3><p id="contourText">No contouring instructions listed for this selection.</p></section>
+</section>
+
+<section id="all" class="view">
+  <div class="heading"><span class="eyebrow">Complete dataset</span><h2>All Timmerman constraints</h2><p>Search every field in the complete table.</p></div>
+  <div class="card"><label class="allsearch"><span>Filter all rows</span><input id="allSearch" type="search" placeholder="Search all fields"></label>
+  <div class="table-scroll tall"><table><thead><tr><th>Fractions</th><th>Organ / structure</th><th>Type</th><th>Volume</th><th>Volume max</th><th>Point max / other</th><th>Endpoint</th></tr></thead><tbody id="allRows"></tbody></table></div></div>
+</section>
+
+<section id="about" class="view">
+  <div class="heading"><span class="eyebrow">About this reference</span><h2>Built for fast clinical lookup</h2></div>
+  <div class="about-grid">
+    <article class="card"><h3>Source</h3><p>Timmerman RD. “A Story of Hypofractionation and the Table on the Wall.” International Journal of Radiation Oncology, Biology, Physics. 2022;112(1):4–21.</p></article>
+    <article class="card"><h3>Important disclaimer</h3><p>This website is an educational and clinical reference aid. Confirm constraints against the current publication, protocol, institutional policy, and clinical judgment before use.</p></article>
+    <article class="card"><h3>Future collections</h3><p>The design supports additional medical physics tables, including QA tolerances, brachytherapy constraints, imaging references, and institutional protocols.</p></article>
+  </div>
+</section>
+</main>
+
+<footer>MedPhys Reference · Version 1.0</footer>
+<script src="data.js"></script><script src="app.js"></script>
+</body></html>
