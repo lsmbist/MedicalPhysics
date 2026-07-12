@@ -8,7 +8,7 @@
 <body>
 <header class="topbar">
   <div class="brand"><div class="logo">MP</div><div><h1>Radiation Oncology Reference</h1><p>Radiation Oncology and Medical Physics tables</p></div></div>
-  <nav><button class="nav active" data-view="home">Home</button><button class="nav" data-view="reference">Dose constraints</button><button class="nav" data-view="bed">BED calculator</button><button class="nav" data-view="all">All tables</button><button class="nav" data-view="about">About</button></nav>
+  <nav><button class="nav active" data-view="home">Home</button><button class="nav" data-view="reference">Dose constraints</button><button class="nav" data-view="reirradiation">Reirradiation</button><button class="nav" data-view="bed">BED calculator</button><button class="nav" data-view="all">All tables</button><button class="nav" data-view="about">About</button></nav>
 </header>
 
 <main>
@@ -33,7 +33,14 @@
       <article class="resource-card"><div class="resource-icon">DC</div><h4>Timmerman dose constraints</h4><p>Search by organ, fractionation schedule, endpoint, volume limit, and contouring instructions.</p><button data-open-view="reference">Open dose constraints</button></article>
       <article class="resource-card"><div class="resource-icon purple">BED</div><h4>BED and EQD2 calculator</h4><p>Calculate BED, EQD2, and an equivalent fractionation schedule using the linear-quadratic model.</p><button data-open-view="bed">Open calculator</button></article>
       <article class="resource-card"><div class="resource-icon green-bg">ALL</div><h4>All Timmerman tables</h4><p>Search the complete dataset across organs, fraction schedules, volume constraints, and endpoints.</p><button data-open-view="all">Browse all tables</button></article>
-    </div>
+    
+      <article class="resource-card">
+        <div class="resource-icon red-bg">RE</div>
+        <h4>Reirradiation dose assessment</h4>
+        <p>Calculate cumulative BED/EQD2 and review organ-specific published tolerance and recovery evidence.</p>
+        <button data-open-view="reirradiation">Open reirradiation tool</button>
+      </article>
+</div>
   </section>
 
   <section class="home-section">
@@ -81,6 +88,121 @@
   <section class="card contour"><h3>Contouring instructions</h3><p id="contourText">No contouring instructions listed for this selection.</p></section>
 </section>
 
+
+
+<section id="reirradiation" class="view">
+  <div class="reirr-hero">
+    <span class="eyebrow">Cumulative dose assessment</span>
+    <h2>Reirradiation dose-limit reference</h2>
+    <p>Estimate cumulative BED and EQD2 from two radiotherapy courses, then review organ-specific published evidence, interval considerations, and important clinical cautions.</p>
+  </div>
+
+  <section class="card reirr-warning">
+    <h3>Important clinical limitation</h3>
+    <p>This page is an evidence-summary and calculation aid. It does not determine whether a plan is safe, prescribe a recovery discount, or replace deformable dose accumulation, physician review, current literature, institutional policy, or multidisciplinary judgment.</p>
+  </section>
+
+  <div class="reirr-grid">
+    <section class="card reirr-card">
+      <div class="card-head">
+        <div><h3>Course 1</h3><p>Enter the prior organ dose and fractionation.</p></div>
+      </div>
+      <div class="input-grid">
+        <label><span>Total organ dose (Gy)</span><input id="r1Dose" type="number" min="0" step="0.01" value="45"></label>
+        <label><span>Fractions</span><input id="r1Fractions" type="number" min="1" step="1" value="25"></label>
+        <label><span>α/β (Gy)</span><input id="rAlphaBeta" type="number" min="0.01" step="0.1" value="2"></label>
+      </div>
+      <div class="results-grid">
+        <article class="result-box"><span>Dose/fraction</span><strong id="r1Dpf">1.80 Gy</strong></article>
+        <article class="result-box"><span>BED</span><strong id="r1Bed">85.50 Gy</strong></article>
+        <article class="result-box"><span>EQD2</span><strong id="r1Eqd2">42.75 Gy</strong></article>
+      </div>
+    </section>
+
+    <section class="card reirr-card">
+      <div class="card-head">
+        <div><h3>Course 2</h3><p>Enter the proposed organ dose and fractionation.</p></div>
+      </div>
+      <div class="input-grid">
+        <label><span>Total organ dose (Gy)</span><input id="r2Dose" type="number" min="0" step="0.01" value="20"></label>
+        <label><span>Fractions</span><input id="r2Fractions" type="number" min="1" step="1" value="5"></label>
+        <label><span>Interval (months)</span><input id="rInterval" type="number" min="0" step="1" value="12"></label>
+      </div>
+      <div class="results-grid">
+        <article class="result-box"><span>Dose/fraction</span><strong id="r2Dpf">4.00 Gy</strong></article>
+        <article class="result-box"><span>BED</span><strong id="r2Bed">60.00 Gy</strong></article>
+        <article class="result-box"><span>EQD2</span><strong id="r2Eqd2">30.00 Gy</strong></article>
+      </div>
+    </section>
+  </div>
+
+  <section class="card cumulative-card">
+    <div class="card-head">
+      <div><h3>Unadjusted cumulative dose</h3><p>No recovery percentage is subtracted.</p></div>
+      <label class="organ-picker"><span>Organ / tissue</span><select id="reirrOrgan"></select></label>
+    </div>
+    <div class="cumulative-results">
+      <article><span>Cumulative BED</span><strong id="rCumBed">145.50 Gy</strong></article>
+      <article><span>Cumulative EQD2</span><strong id="rCumEqd2">72.75 Gy</strong></article>
+      <article><span>Course 2 contribution</span><strong id="rContribution">41.2%</strong></article>
+      <article><span>Interval category</span><strong id="rIntervalLabel">6–12 months</strong></article>
+    </div>
+    <div id="rCalcError" class="calculator-error" hidden></div>
+  </section>
+
+  <section class="card evidence-card">
+    <div class="card-head">
+      <div>
+        <h3 id="evidenceTitle">Spinal cord / thecal sac</h3>
+        <p id="evidenceSubtitle">Published evidence summary</p>
+      </div>
+      <span id="evidenceLevel" class="evidence-badge">Limited clinical evidence</span>
+    </div>
+
+    <div class="evidence-layout">
+      <div>
+        <h4>Published dose information</h4>
+        <ul id="evidenceDose"></ul>
+      </div>
+      <div>
+        <h4>Time interval and recovery</h4>
+        <ul id="evidenceRecovery"></ul>
+      </div>
+      <div>
+        <h4>Clinical cautions</h4>
+        <ul id="evidenceCautions"></ul>
+      </div>
+    </div>
+
+    <div class="source-note">
+      <strong>Source context:</strong>
+      <span id="evidenceSource"></span>
+    </div>
+  </section>
+
+  <section class="card evidence-table-card">
+    <div class="card-head">
+      <div><h3>Organ-specific published ranges</h3><p>These are literature summaries, not universal planning constraints.</p></div>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>Organ / tissue</th><th>Published dose information</th><th>Suggested interval / recovery note</th><th>Key caution</th></tr>
+        </thead>
+        <tbody id="reirrTableBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card source-card">
+    <h3>References used for this page</h3>
+    <ol>
+      <li>Nieder C, Langendijk J, editors. <em>Re-Irradiation: New Frontiers</em>, 2nd ed. Springer; 2017.</li>
+      <li>Das S, Patro KC, Mukherji A. Recovery and tolerance of the organs at risk during re-irradiation. <em>Journal of Current Oncology</em>. 2018;1:23–28.</li>
+      <li>ESTRO–EORTC consensus on reirradiation definition and standardized reporting.</li>
+    </ol>
+  </section>
+</section>
 
 <section id="bed" class="view">
   <div class="calculator-hero">
