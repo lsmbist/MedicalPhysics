@@ -166,3 +166,11 @@ document.querySelectorAll('.preset').forEach(button=>button.addEventListener('cl
   calculateBed();
 }));
 calculateBed();
+
+document.querySelectorAll('[data-open-view]').forEach(button=>button.addEventListener('click',()=>{
+  const target=button.dataset.openView;
+  document.querySelectorAll('.nav,.view').forEach(x=>x.classList.remove('active'));
+  document.querySelector(`.nav[data-view="${target}"]`)?.classList.add('active');
+  document.getElementById(target)?.classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}));

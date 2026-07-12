@@ -8,11 +8,51 @@
 <body>
 <header class="topbar">
   <div class="brand"><div class="logo">MP</div><div><h1>Radiation Oncology Reference</h1><p>Radiation Oncology and Medical Physics tables</p></div></div>
-  <nav><button class="nav active" data-view="reference">Timmerman Dose Constraints</button><button class="nav" data-view="bed">BED calculator</button><button class="nav" data-view="all">All tables</button><button class="nav" data-view="about">About</button></nav>
+  <nav><button class="nav active" data-view="home">Home</button><button class="nav" data-view="reference">Dose constraints</button><button class="nav" data-view="bed">BED calculator</button><button class="nav" data-view="all">All tables</button><button class="nav" data-view="about">About</button></nav>
 </header>
 
 <main>
-<section id="reference" class="view active">
+
+<section id="home" class="view active">
+  <div class="landing-hero">
+    <div>
+      <span class="eyebrow">Radiation Oncology Reference</span>
+      <h2>Clinical tables, calculators, and medical physics tools in one place</h2>
+      <p>This website provides fast access to radiation oncology dose constraints, medical physics reference tables, and practical clinical calculators. New resources can be added over time while keeping one consistent place for clinical lookup.</p>
+      <div class="hero-actions">
+        <button class="primary-link" data-open-view="reference">Explore dose constraints</button>
+        <button class="secondary-link" data-open-view="bed">Open BED calculator</button>
+      </div>
+    </div>
+    <div class="landing-panel"><span>Current resources</span><strong>2</strong><p>Timmerman dose constraints and a BED/EQD2 calculator</p></div>
+  </div>
+
+  <section class="home-section">
+    <span class="eyebrow dark">Available now</span><h3>Clinical resources</h3>
+    <div class="resource-grid">
+      <article class="resource-card"><div class="resource-icon">DC</div><h4>Timmerman dose constraints</h4><p>Search by organ, fractionation schedule, endpoint, volume limit, and contouring instructions.</p><button data-open-view="reference">Open dose constraints</button></article>
+      <article class="resource-card"><div class="resource-icon purple">BED</div><h4>BED and EQD2 calculator</h4><p>Calculate BED, EQD2, and an equivalent fractionation schedule using the linear-quadratic model.</p><button data-open-view="bed">Open calculator</button></article>
+      <article class="resource-card"><div class="resource-icon green-bg">ALL</div><h4>All Timmerman tables</h4><p>Search the complete dataset across organs, fraction schedules, volume constraints, and endpoints.</p><button data-open-view="all">Browse all tables</button></article>
+    </div>
+  </section>
+
+  <section class="home-section">
+    <span class="eyebrow dark">Future resources</span><h3>Designed to grow with your library</h3>
+    <div class="future-grid">
+      <article><strong>QA</strong><h4>Linac QA tables</h4><p>TG-142, imaging, and patient-specific QA references.</p></article>
+      <article><strong>BT</strong><h4>Brachytherapy</h4><p>HDR, LDR, TG-43, and applicator references.</p></article>
+      <article><strong>IMG</strong><h4>Imaging and CT</h4><p>CT simulation, HU, image quality, and dose references.</p></article>
+      <article><strong>CALC</strong><h4>Additional calculators</h4><p>Decay, shielding, electron range, MU, and more.</p></article>
+    </div>
+  </section>
+
+  <section class="card purpose-card">
+    <div><span class="eyebrow dark">Purpose</span><h3>A practical clinical reference library</h3></div>
+    <p>The goal is to organize commonly used radiation oncology and medical physics information into a searchable, consistent, and easy-to-update format. This website is a reference aid and does not replace current publications, institutional protocols, or professional clinical judgment.</p>
+  </section>
+</section>
+
+<section id="reference" class="view">
   <div class="hero"><span class="eyebrow">Timmerman tables · August 2021</span><h2>Normal tissue dose constraints</h2><p>Search by organ or endpoint, compare fractionation schedules, and review volume limits, complications, and contouring guidance.</p></div>
 
   <div class="card controls">
