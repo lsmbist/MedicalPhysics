@@ -100,3 +100,69 @@ document.getElementById('allSearch').addEventListener('input',e=>renderAll(e.tar
 window.addEventListener('resize',()=>drawChart(data.filter(r=>r.organ===organSelect.value).sort((a,b)=>a.fractions-b.fractions)));
 
 update();renderAll();
+
+
+// BED and EQD2 calculator
+const bedInputs={
+  totalDose:document.getElementById('bedTotalDose'),
+  fractions:document.getElementById('bedFractions'),
+  alphaBeta:document.getElementById('bedAlphaBeta'),
+  newFractions:document.getElementById('newFractions')
+};
+
+function fmtDose(value){
+  return Number.isFinite(value)?`${value.toFixed(2)} Gy`:'—';
+}
+
+function calculateBed(){
+  const totalDose=Number(bedInputs.totalDose.value);
+  const n=Number(bedInputs.fractions.value);
+  const ab=Number(bedInputs.alphaBeta.value);
+  const newN=Number(bedInputs.newFractions.value);
+  const error=document.getElementById('bedError');
+
+  if(!(totalDose>0)||!(n>0)||!(ab>0)||!(newN>0)){
+    error.hidden=false;
+    error.textContent='Enter positive values for total dose, fractions, α/β, and new fractions.';
+    return;
+  }
+  error.hidden=true;
+
+  const d=totalDose/n;
+  const bed=n*d*(1+d/ab);
+  const eqd2=bed/(1+2/ab);
+
+  const discriminant=(ab*ab)+(4*bed*ab/newN);
+  const newD=(-ab+Math.sqrt(discriminant))/2;
+  const newTotal=newN*newD;
+  const bedCheck=newN*newD*(1+newD/ab);
+  const newEqd2=bedCheck/(1+2/ab);
+
+  document.getElementById('bedDosePerFraction').textContent=fmtDose(d);
+  document.getElementById('bedResult').textContent=fmtDose(bed);
+  document.getElementById('eqd2Result').textContent=fmtDose(eqd2);
+  document.getElementById('equivalentDosePerFraction').textContent=fmtDose(newD);
+  document.getElementById('equivalentExplanation').textContent=`${newN} fractions × ${newD.toFixed(2)} Gy`;
+  document.getElementById('equivalentTotalDose').textContent=fmtDose(newTotal);
+  document.getElementById('equivalentBedCheck').textContent=fmtDose(bedCheck);
+
+  document.getElementById('tableInitialDose').textContent=fmtDose(totalDose);
+  document.getElementById('tableInitialFractions').textContent=n.toString();
+  document.getElementById('tableInitialDpf').textContent=fmtDose(d);
+  document.getElementById('tableInitialBed').textContent=fmtDose(bed);
+  document.getElementById('tableInitialEqd2').textContent=fmtDose(eqd2);
+  document.getElementById('tableNewDose').textContent=fmtDose(newTotal);
+  document.getElementById('tableNewFractions').textContent=newN.toString();
+  document.getElementById('tableNewDpf').textContent=fmtDose(newD);
+  document.getElementById('tableNewBed').textContent=fmtDose(bedCheck);
+  document.getElementById('tableNewEqd2').textContent=fmtDose(newEqd2);
+}
+
+Object.values(bedInputs).forEach(input=>input.addEventListener('input',calculateBed));
+document.querySelectorAll('.preset').forEach(button=>button.addEventListener('click',()=>{
+  document.querySelectorAll('.preset').forEach(x=>x.classList.remove('active'));
+  button.classList.add('active');
+  bedInputs.alphaBeta.value=button.dataset.ab;
+  calculateBed();
+}));
+calculateBed();

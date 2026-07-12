@@ -8,7 +8,7 @@
 <body>
 <header class="topbar">
   <div class="brand"><div class="logo">MP</div><div><h1>Radiation Oncology Reference</h1><p>Radiation Oncology and Medical Physics tables</p></div></div>
-  <nav><button class="nav active" data-view="reference">Reference</button><button class="nav" data-view="all">All tables</button><button class="nav" data-view="about">About</button></nav>
+  <nav><button class="nav active" data-view="reference">Reference</button><button class="nav" data-view="bed">BED calculator</button><button class="nav" data-view="all">All tables</button><button class="nav" data-view="about">About</button></nav>
 </header>
 
 <main>
@@ -41,6 +41,101 @@
   <section class="card contour"><h3>Contouring instructions</h3><p id="contourText">No contouring instructions listed for this selection.</p></section>
 </section>
 
+
+<section id="bed" class="view">
+  <div class="calculator-hero">
+    <span class="eyebrow">Linear-quadratic model</span>
+    <h2>BED and EQD2 calculator</h2>
+    <p>Calculate biologically effective dose, EQD2, and an equivalent fractionation schedule that preserves the selected BED.</p>
+  </div>
+
+  <div class="calculator-grid">
+    <section class="card calculator-card">
+      <div class="card-head">
+        <div>
+          <h3>Initial treatment plan</h3>
+          <p>Enter the prescription and tissue α/β ratio.</p>
+        </div>
+      </div>
+
+      <div class="preset-row">
+        <button class="preset active" data-ab="3">Late-responding tissue · α/β 3</button>
+        <button class="preset" data-ab="10">Tumor/early tissue · α/β 10</button>
+      </div>
+
+      <div class="input-grid">
+        <label><span>Total dose (Gy)</span><input id="bedTotalDose" type="number" min="0" step="0.01" value="60"></label>
+        <label><span>Number of fractions</span><input id="bedFractions" type="number" min="1" step="1" value="30"></label>
+        <label><span>α/β ratio (Gy)</span><input id="bedAlphaBeta" type="number" min="0.01" step="0.1" value="3"></label>
+      </div>
+
+      <div class="results-grid">
+        <article class="result-box"><span>Dose per fraction</span><strong id="bedDosePerFraction">2.00 Gy</strong></article>
+        <article class="result-box"><span>BED</span><strong id="bedResult">100.00 Gy</strong></article>
+        <article class="result-box"><span>EQD2</span><strong id="eqd2Result">60.00 Gy</strong></article>
+      </div>
+    </section>
+
+    <section class="card calculator-card">
+      <div class="card-head">
+        <div>
+          <h3>Equivalent new schedule</h3>
+          <p>Choose a new number of fractions while keeping the same BED.</p>
+        </div>
+      </div>
+
+      <div class="input-grid one-row">
+        <label><span>New number of fractions</span><input id="newFractions" type="number" min="1" step="1" value="25"></label>
+      </div>
+
+      <div class="equivalent-callout">
+        <span>Equivalent dose per fraction</span>
+        <strong id="equivalentDosePerFraction">2.27 Gy</strong>
+        <small id="equivalentExplanation">25 fractions × 2.27 Gy</small>
+      </div>
+
+      <div class="results-grid two">
+        <article class="result-box"><span>Equivalent total dose</span><strong id="equivalentTotalDose">56.87 Gy</strong></article>
+        <article class="result-box"><span>Recalculated BED</span><strong id="equivalentBedCheck">100.00 Gy</strong></article>
+      </div>
+
+      <div id="bedError" class="calculator-error" hidden></div>
+    </section>
+  </div>
+
+  <section class="card formula-card">
+    <h3>Equations</h3>
+    <div class="formula-grid">
+      <div><span>BED</span><code>BED = n × d × (1 + d ÷ (α/β))</code></div>
+      <div><span>EQD2</span><code>EQD2 = BED ÷ (1 + 2 ÷ (α/β))</code></div>
+      <div><span>Equivalent fraction size</span><code>d = [−(α/β) + √((α/β)² + 4 × BED × (α/β) ÷ n)] ÷ 2</code></div>
+    </div>
+  </section>
+
+  <section class="card bed-table-card">
+    <div class="card-head">
+      <div>
+        <h3>Plan comparison</h3>
+        <p>The new plan is calculated to preserve BED for the selected α/β ratio.</p>
+      </div>
+    </div>
+    <div class="table-scroll">
+      <table class="bed-comparison">
+        <thead><tr><th>Plan</th><th>Total dose</th><th>Fractions</th><th>Dose/fraction</th><th>BED</th><th>EQD2</th></tr></thead>
+        <tbody>
+          <tr><td>Initial plan</td><td id="tableInitialDose">60.00 Gy</td><td id="tableInitialFractions">30</td><td id="tableInitialDpf">2.00 Gy</td><td id="tableInitialBed">100.00 Gy</td><td id="tableInitialEqd2">60.00 Gy</td></tr>
+          <tr><td>Equivalent plan</td><td id="tableNewDose">56.87 Gy</td><td id="tableNewFractions">25</td><td id="tableNewDpf">2.27 Gy</td><td id="tableNewBed">100.00 Gy</td><td id="tableNewEqd2">60.00 Gy</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card warning-card">
+    <h3>Clinical note</h3>
+    <p>The linear-quadratic model is a mathematical reference tool. Results require clinical interpretation and may not be appropriate for all dose-per-fraction ranges, tissues, treatment techniques, or protocols. Verify calculations and follow current institutional guidance.</p>
+  </section>
+</section>
+
 <section id="all" class="view">
   <div class="heading"><span class="eyebrow">Complete dataset</span><h2>All Timmerman constraints</h2><p>Search every field in the complete table.</p></div>
   <div class="card"><label class="allsearch"><span>Filter all rows</span><input id="allSearch" type="search" placeholder="Search all fields"></label>
@@ -57,6 +152,6 @@
 </section>
 </main>
 
-<footer>MedPhys Reference · Version 1.0</footer>
+<footer>Radiation Oncology Reference · Version 1.1</footer>
 <script src="data.js"></script><script src="app.js"></script>
 </body></html>
