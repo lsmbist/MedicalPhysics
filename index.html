@@ -24,7 +24,7 @@
         <button class="secondary-link" data-open-view="bed">Open BED calculator</button>
       </div>
     </div>
-    <div class="landing-panel"><span>Current resources</span><strong>2</strong><p>Timmerman dose constraints and a BED/EQD2 calculator</p></div>
+    <div class="landing-panel"><span>Current resources</span><strong>3</strong><p>Dose constraints, BED/EQD2, and practical reirradiation assessment</p></div>
   </div>
 
   <section class="home-section">
@@ -148,6 +148,56 @@
       <article><span>Interval category</span><strong id="rIntervalLabel">6–12 months</strong></article>
     </div>
     <div id="rCalcError" class="calculator-error" hidden></div>
+  </section>
+
+
+  <section class="card timmerman-check-card">
+    <div class="card-head">
+      <div>
+        <h3>Practical Timmerman compliance check</h3>
+        <p>Compare the proposed second-course organ dose with the selected Timmerman single-course constraint.</p>
+      </div>
+      <span id="timmermanStatusBadge" class="compliance-badge neutral">Select a constraint</span>
+    </div>
+
+    <div class="timmerman-controls">
+      <label><span>Timmerman organ / structure</span><select id="timmermanOrgan"></select></label>
+      <label><span>Fraction schedule</span><select id="timmermanFractions"></select></label>
+      <label><span>Constraint to compare</span><select id="timmermanMetric">
+        <option value="pointMax">Maximum point dose</option>
+        <option value="volumeMax">Volume / critical-volume dose maximum</option>
+      </select></label>
+    </div>
+
+    <div class="constraint-context">
+      <div><span>Volume definition</span><strong id="tmVolume">—</strong></div>
+      <div><span>Published limit</span><strong id="tmLimit">—</strong></div>
+      <div><span>Endpoint</span><strong id="tmEndpoint">—</strong></div>
+      <div><span>Proposed course-2 organ dose</span><strong id="tmProposedDose">—</strong></div>
+    </div>
+
+    <div class="compliance-results">
+      <article id="tmCourseResult" class="compliance-result neutral">
+        <span>Course 2 vs. Timmerman</span>
+        <strong id="tmCourseResultTitle">Not evaluated</strong>
+        <p id="tmCourseResultText">Select an organ, fraction schedule, and numeric constraint.</p>
+      </article>
+      <article id="tmCumulativeResult" class="compliance-result neutral">
+        <span>Cumulative EQD2 comparison</span>
+        <strong id="tmCumulativeResultTitle">Not evaluated</strong>
+        <p id="tmCumulativeResultText">This comparison is informational and is not a validated reirradiation tolerance test.</p>
+      </article>
+    </div>
+
+    <div class="practical-guidance">
+      <h4>How to use the result</h4>
+      <ol>
+        <li>Enter the actual dose received by this organ during both treatment courses, not merely the prescription dose.</li>
+        <li>Select the Timmerman row that matches the proposed fraction schedule and applicable volume or point-dose metric.</li>
+        <li>A green result means the proposed second-course dose is within that selected Timmerman single-course limit.</li>
+        <li>A red result means it exceeds the selected Timmerman limit. The cumulative result is shown only as an additional warning because Timmerman is not a reirradiation tolerance table.</li>
+      </ol>
+    </div>
   </section>
 
   <section class="card evidence-card">

@@ -457,3 +457,143 @@ if(reirrTableBody){
 
 calculateReirr();
 renderEvidence();
+
+
+// Practical comparison with Timmerman single-course constraints
+const tmOrgan=document.getElementById('timmermanOrgan');
+const tmFractions=document.getElementById('timmermanFractions');
+const tmMetric=document.getElementById('timmermanMetric');
+
+function tmNumeric(value){
+  if(typeof value==='number' && Number.isFinite(value))return value;
+  if(value===null||value===undefined)return null;
+  const text=String(value).trim();
+  if(!text || text.includes('%') || /^V-/i.test(text))return null;
+  const match=text.match(/^<?\s*(-?\d+(?:\.\d+)?)/);
+  return match?Number(match[1]):null;
+}
+
+function tmAvailableRows(){
+  return data.filter(row =>
+    tmNumeric(row.pointMax)!==null || tmNumeric(row.volumeMax)!==null
+  );
+}
+
+function populateTmOrgans(){
+  if(!tmOrgan)return;
+  const names=[...new Set(tmAvailableRows().map(row=>row.organ))].sort((a,b)=>a.localeCompare(b));
+  tmOrgan.innerHTML='';
+  names.forEach(name=>tmOrgan.add(new Option(name,name)));
+  if(names.includes('Spinal cord and medulla'))tmOrgan.value='Spinal cord and medulla';
+  populateTmFractions();
+}
+
+function populateTmFractions(){
+  if(!tmOrgan||!tmFractions)return;
+  const fx=[...new Set(tmAvailableRows().filter(row=>row.organ===tmOrgan.value).map(row=>row.fractions))].sort((a,b)=>a-b);
+  const previous=Number(tmFractions.value);
+  tmFractions.innerHTML='';
+  fx.forEach(n=>tmFractions.add(new Option(`${n} fraction${n===1?'':'s'}`,n)));
+  if(fx.includes(previous))tmFractions.value=String(previous);
+  updateTmComparison();
+}
+
+function selectedTmRow(){
+  if(!tmOrgan||!tmFractions)return null;
+  const candidates=data.filter(row=>row.organ===tmOrgan.value && row.fractions===Number(tmFractions.value));
+  const metric=tmMetric?.value||'pointMax';
+  return candidates.find(row=>tmNumeric(row[metric])!==null) || candidates[0] || null;
+}
+
+function setComplianceCard(elementId,status,title,text){
+  const box=document.getElementById(elementId);
+  if(!box)return;
+  box.classList.remove('pass','fail','caution','neutral');
+  box.classList.add(status);
+  const titleEl=document.getElementById(`${elementId}Title`);
+  const textEl=document.getElementById(`${elementId}Text`);
+  if(titleEl)titleEl.textContent=title;
+  if(textEl)textEl.textContent=text;
+}
+
+function updateTmComparison(){
+  if(!tmOrgan)return;
+  const row=selectedTmRow();
+  const metric=tmMetric.value;
+  const limit=row?tmNumeric(row[metric]):null;
+  const proposed=Number(document.getElementById('r2Dose')?.value);
+  const n2=Number(document.getElementById('r2Fractions')?.value);
+  const ab=Number(document.getElementById('rAlphaBeta')?.value);
+  const d1=Number(document.getElementById('r1Dose')?.value);
+  const n1=Number(document.getElementById('r1Fractions')?.value);
+
+  document.getElementById('tmVolume').textContent=row?.volume||'Not specified';
+  document.getElementById('tmLimit').textContent=limit!==null?`${limit.toFixed(1)} Gy`:'No numeric limit';
+  document.getElementById('tmEndpoint').textContent=row?.endpoint||'Not specified';
+  document.getElementById('tmProposedDose').textContent=Number.isFinite(proposed)?`${proposed.toFixed(2)} Gy`:'—';
+
+  const badge=document.getElementById('timmermanStatusBadge');
+  const courseBox=document.getElementById('tmCourseResult');
+  const cumBox=document.getElementById('tmCumulativeResult');
+
+  if(!row || limit===null || !(proposed>=0)){
+    setComplianceCard('tmCourseResult','neutral','Not evaluated','No numeric Timmerman constraint is available for this selection.');
+    setComplianceCard('tmCumulativeResult','neutral','Not evaluated','Choose a numeric constraint and enter valid course doses.');
+    badge.className='compliance-badge neutral';
+    badge.textContent='No comparison available';
+    return;
+  }
+
+  const difference=limit-proposed;
+  if(proposed<=limit){
+    setComplianceCard(
+      'tmCourseResult','pass','COMPLIES with selected Timmerman limit',
+      `The proposed course-2 organ dose is ${Math.abs(difference).toFixed(2)} Gy below the selected ${limit.toFixed(2)} Gy single-course limit.`
+    );
+    badge.className='compliance-badge pass';
+    badge.textContent='Course 2 complies';
+  }else{
+    setComplianceCard(
+      'tmCourseResult','fail','DOES NOT COMPLY with selected Timmerman limit',
+      `The proposed course-2 organ dose exceeds the selected ${limit.toFixed(2)} Gy single-course limit by ${Math.abs(difference).toFixed(2)} Gy.`
+    );
+    badge.className='compliance-badge fail';
+    badge.textContent='Course 2 exceeds limit';
+  }
+
+  if(!(n2>0)||!(n1>0)||!(ab>0)||!(d1>=0)){
+    setComplianceCard('tmCumulativeResult','neutral','Not evaluated','Enter valid doses, fractions, and α/β values.');
+    return;
+  }
+
+  const priorDpf=d1/n1;
+  const proposedDpf=proposed/n2;
+  const priorEqd2=(d1*(1+priorDpf/ab))/(1+2/ab);
+  const proposedEqd2=(proposed*(1+proposedDpf/ab))/(1+2/ab);
+  const cumulativeEqd2=priorEqd2+proposedEqd2;
+
+  const tmDpf=limit/Number(row.fractions);
+  const tmEqd2=(limit*(1+tmDpf/ab))/(1+2/ab);
+  const ratio=tmEqd2>0?100*cumulativeEqd2/tmEqd2:NaN;
+
+  if(cumulativeEqd2<=tmEqd2){
+    setComplianceCard(
+      'tmCumulativeResult','caution','Cumulative EQD2 below single-course equivalent',
+      `Cumulative EQD2 is ${cumulativeEqd2.toFixed(2)} Gy versus ${tmEqd2.toFixed(2)} Gy for the selected Timmerman limit (${ratio.toFixed(1)}%). This is not a validated reirradiation clearance.`
+    );
+  }else{
+    setComplianceCard(
+      'tmCumulativeResult','fail','Cumulative EQD2 exceeds single-course equivalent',
+      `Cumulative EQD2 is ${cumulativeEqd2.toFixed(2)} Gy versus ${tmEqd2.toFixed(2)} Gy for the selected Timmerman limit (${ratio.toFixed(1)}%). This raises concern but is not itself a validated toxicity prediction.`
+    );
+  }
+}
+
+tmOrgan?.addEventListener('change',populateTmFractions);
+tmFractions?.addEventListener('change',updateTmComparison);
+tmMetric?.addEventListener('change',updateTmComparison);
+['r1Dose','r1Fractions','r2Dose','r2Fractions','rAlphaBeta','rInterval'].forEach(id=>{
+  document.getElementById(id)?.addEventListener('input',updateTmComparison);
+});
+
+populateTmOrgans();

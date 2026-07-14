@@ -86,3 +86,26 @@ input,select{width:100%;border:1px solid #cfd8e3;border-radius:11px;padding:12px
 @media(max-width:560px){.cumulative-results{grid-template-columns:1fr}}
 
 .table-link{border:0;background:transparent;color:#0f4c81;font-weight:800;padding:0;cursor:pointer;text-align:left}.table-link:hover{text-decoration:underline}
+
+
+/* Practical Timmerman compliance panel */
+.timmerman-check-card{padding:22px;margin-bottom:18px;border-top:5px solid #1f6f50}
+.timmerman-controls{display:grid;grid-template-columns:1.2fr .8fr 1.2fr;gap:14px;margin-bottom:16px}
+.constraint-context{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.constraint-context>div{background:#f7faf8;border:1px solid #d8e8df;border-radius:13px;padding:14px}
+.constraint-context span{display:block;color:#5f7769;font-size:12px;text-transform:uppercase;font-weight:800;letter-spacing:.05em;margin-bottom:7px}
+.constraint-context strong{font-size:17px;color:#264c39}
+.compliance-results{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.compliance-result{border-radius:16px;padding:18px;border:1px solid var(--line)}
+.compliance-result span{display:block;font-size:12px;text-transform:uppercase;font-weight:800;letter-spacing:.05em;margin-bottom:8px}
+.compliance-result strong{display:block;font-size:22px;margin-bottom:7px}
+.compliance-result p{margin:0;line-height:1.55}
+.compliance-result.pass{background:#edf8f1;border-color:#b9dfc6;color:#235b38}
+.compliance-result.fail{background:#fff0ef;border-color:#efbeb8;color:#8b2820}
+.compliance-result.caution{background:#fff8e8;border-color:#ead39a;color:#735713}
+.compliance-result.neutral{background:#f8fafc;color:#526276}
+.compliance-badge{display:inline-flex;align-items:center;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:800}
+.compliance-badge.pass{background:#dff3e6;color:#23603a}.compliance-badge.fail{background:#f8deda;color:#8b2820}.compliance-badge.caution{background:#f8edca;color:#6f5615}.compliance-badge.neutral{background:#edf1f5;color:#5b697a}
+.practical-guidance{margin-top:16px;background:#f6f9fc;border:1px solid var(--line);border-radius:14px;padding:16px}
+.practical-guidance h4{margin:0 0 10px}.practical-guidance ol{margin:0;padding-left:21px;color:#4f6074}.practical-guidance li{margin:7px 0;line-height:1.5}
+@media(max-width:900px){.timmerman-controls,.constraint-context,.compliance-results{grid-template-columns:1fr}}
