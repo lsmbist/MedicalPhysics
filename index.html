@@ -97,6 +97,102 @@
     <p>Estimate cumulative BED and EQD2 from two radiotherapy courses, then review organ-specific published evidence, interval considerations, and important clinical cautions.</p>
   </div>
 
+
+  <section class="card pdf-upload-card">
+    <div class="card-head">
+      <div>
+        <h3>Upload combined plan and Velocity PDF</h3>
+        <p>The report is processed locally in this browser. It is not uploaded to the website server.</p>
+      </div>
+      <span id="pdfPrivacyBadge" class="privacy-badge">Local processing</span>
+    </div>
+
+    <div class="pdf-upload-zone">
+      <input id="reirrPdfFile" type="file" accept="application/pdf,.pdf" hidden>
+      <button id="chooseReirrPdf" class="upload-button">Choose PDF</button>
+      <div>
+        <strong id="reirrPdfName">No PDF selected</strong>
+        <p>Designed for a combined RayStation plan report and Velocity cumulative DVH report.</p>
+      </div>
+      <button id="analyzeReirrPdf" class="analyze-button" disabled>Analyze PDF</button>
+    </div>
+
+    <div id="pdfProgressWrap" class="pdf-progress-wrap" hidden>
+      <div class="pdf-progress-track"><div id="pdfProgressBar" class="pdf-progress-bar"></div></div>
+      <span id="pdfProgressText">Preparing PDF…</span>
+    </div>
+
+    <div id="pdfAnalysisMessage" class="pdf-message" hidden></div>
+
+    <div id="pdfSummary" class="pdf-summary" hidden>
+      <article><span>Detected prescription</span><strong id="pdfPrescription">—</strong></article>
+      <article><span>Detected fractions</span><strong id="pdfFractions">—</strong></article>
+      <article><span>Current-course structures</span><strong id="pdfCurrentCount">0</strong></article>
+      <article><span>Cumulative structures</span><strong id="pdfCumulativeCount">0</strong></article>
+    </div>
+  </section>
+
+  <section id="pdfReviewSection" class="card pdf-review-card" hidden>
+    <div class="card-head">
+      <div>
+        <h3>Review extracted organ doses</h3>
+        <p>Correct the organ mapping or values before running the Timmerman comparison.</p>
+      </div>
+      <button id="runPdfComparison" class="analyze-button">Compare all organs</button>
+    </div>
+
+    <div class="table-scroll">
+      <table class="pdf-review-table">
+        <thead>
+          <tr>
+            <th>Include</th>
+            <th>PDF structure</th>
+            <th>Timmerman match</th>
+            <th>Current mean</th>
+            <th>Current max / D1</th>
+            <th>Cumulative mean</th>
+            <th>Cumulative max</th>
+          </tr>
+        </thead>
+        <tbody id="pdfExtractedRows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="pdfComparisonSection" class="card pdf-comparison-card" hidden>
+    <div class="card-head">
+      <div>
+        <h3>Automatic Timmerman comparison</h3>
+        <p>Current-course values are compared with the selected single-course Timmerman row. Cumulative values are displayed separately for clinical review.</p>
+      </div>
+      <button id="downloadPdfComparisonCsv" class="secondary">Download results</button>
+    </div>
+
+    <div class="comparison-summary">
+      <article class="pass"><span>Pass</span><strong id="pdfPassCount">0</strong></article>
+      <article class="fail"><span>Exceeds</span><strong id="pdfFailCount">0</strong></article>
+      <article class="caution"><span>Not comparable</span><strong id="pdfCautionCount">0</strong></article>
+      <article class="neutral"><span>No match</span><strong id="pdfNoMatchCount">0</strong></article>
+    </div>
+
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Organ</th>
+            <th>PDF metric used</th>
+            <th>PDF value</th>
+            <th>Timmerman metric</th>
+            <th>Limit</th>
+            <th>Current-course result</th>
+            <th>Cumulative exposure</th>
+          </tr>
+        </thead>
+        <tbody id="pdfComparisonRows"></tbody>
+      </table>
+    </div>
+  </section>
+
   <section class="card reirr-warning">
     <h3>Important clinical limitation</h3>
     <p>This page is an evidence-summary and calculation aid. It does not determine whether a plan is safe, prescribe a recovery discount, or replace deformable dose accumulation, physician review, current literature, institutional policy, or multidisciplinary judgment.</p>
@@ -364,6 +460,8 @@
 </section>
 </main>
 
-<footer>Radiation Oncology Reference · Version 1.1</footer>
+<footer>Radiation Oncology Reference · Version 1.3</footer>
+<script type="module">import * as pdfjsLib from "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs";pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs";window.pdfjsLib=pdfjsLib;window.dispatchEvent(new Event("pdfjs-ready"));</script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="data.js"></script><script src="app.js"></script>
 </body></html>

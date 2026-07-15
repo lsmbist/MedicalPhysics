@@ -597,3 +597,397 @@ tmMetric?.addEventListener('change',updateTmComparison);
 });
 
 populateTmOrgans();
+
+
+// PDF-assisted reirradiation extraction and Timmerman comparison
+const pdfState={
+  file:null,
+  prescription:null,
+  fractions:null,
+  current:{},
+  cumulative:{},
+  goals:{},
+  rows:[],
+  results:[]
+};
+
+const pdfAliasMap={
+  "airway":"Trachea and main bronchus",
+  "bowel":"Small bowel",
+  "small bowel":"Small bowel",
+  "esophagus":"Esophagus",
+  "heart":"Heart",
+  "kidney_l":"Renal cortex",
+  "kidney_r":"Renal cortex",
+  "kidney l":"Renal cortex",
+  "kidney r":"Renal cortex",
+  "liver":"Liver",
+  "lung_l":"Lungs",
+  "lung_r":"Lungs",
+  "lung l":"Lungs",
+  "lung r":"Lungs",
+  "total lung":"Lungs",
+  "spinalcanal":"Spinal cord and medulla",
+  "spinal canal":"Spinal cord and medulla",
+  "spinalcord":"Spinal cord and medulla",
+  "spinal cord":"Spinal cord and medulla",
+  "stomach":"Stomach",
+  "skin":"Skin"
+};
+
+const knownPdfStructures=[
+  "SpinalCanal","Spinal Canal","SpinalCord","Spinal Cord","Esophagus","Heart","Airway",
+  "Total Lung","Lung_L","Lung_R","Lung L","Lung R","Liver","Stomach","Bowel",
+  "Kidney_L","Kidney_R","Kidney L","Kidney R"
+];
+
+function normalizePdfName(name){
+  return String(name||'').replace(/\s+/g,' ').trim();
+}
+function defaultTmMatch(name){
+  const key=normalizePdfName(name).toLowerCase();
+  if(pdfAliasMap[key])return pdfAliasMap[key];
+  const found=Object.keys(pdfAliasMap).find(alias=>key.includes(alias));
+  return found?pdfAliasMap[found]:'';
+}
+function showPdfMessage(text,type='info'){
+  const box=document.getElementById('pdfAnalysisMessage');
+  if(!box)return;
+  box.hidden=false;box.className=`pdf-message ${type}`;box.textContent=text;
+}
+function setPdfProgress(pct,text){
+  const wrap=document.getElementById('pdfProgressWrap');
+  if(wrap)wrap.hidden=false;
+  const bar=document.getElementById('pdfProgressBar');
+  if(bar)bar.style.width=`${Math.max(0,Math.min(100,pct))}%`;
+  const label=document.getElementById('pdfProgressText');
+  if(label)label.textContent=text;
+}
+function waitForPdfJs(){
+  if(window.pdfjsLib)return Promise.resolve();
+  return new Promise((resolve,reject)=>{
+    const timer=setTimeout(()=>reject(new Error('PDF library did not load. Check the internet connection.')),15000);
+    window.addEventListener('pdfjs-ready',()=>{clearTimeout(timer);resolve();},{once:true});
+  });
+}
+async function renderPdfPage(page,scale=1.7){
+  const viewport=page.getViewport({scale});
+  const canvas=document.createElement('canvas');
+  canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);
+  const context=canvas.getContext('2d',{willReadFrequently:true});
+  await page.render({canvasContext:context,viewport}).promise;
+  return canvas;
+}
+async function extractPdfText(page){
+  try{
+    const content=await page.getTextContent();
+    return content.items.map(item=>item.str).join(' ');
+  }catch(e){return '';}
+}
+async function ocrCanvas(canvas,pageNumber,totalPages){
+  if(!window.Tesseract)throw new Error('OCR library did not load.');
+  setPdfProgress(10+70*(pageNumber/totalPages),`OCR page ${pageNumber} of ${totalPages}…`);
+  const result=await Tesseract.recognize(canvas,'eng',{
+    logger:m=>{
+      if(m.status==='recognizing text'){
+        const pageBase=10+70*((pageNumber-1)/totalPages);
+        setPdfProgress(pageBase+(70/totalPages)*(m.progress||0),`OCR page ${pageNumber}: ${Math.round((m.progress||0)*100)}%`);
+      }
+    }
+  });
+  return result.data.text||'';
+}
+function numbersFromLine(line){
+  return [...String(line).matchAll(/-?\d+(?:\.\d+)?/g)].map(m=>Number(m[0]));
+}
+function findStructureLine(text,structure){
+  const escaped=structure.replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/\s+/g,'\\s*');
+  const re=new RegExp(`(?:^|\\n)[^\\n]*${escaped}[^\\n]*`,'ig');
+  return [...String(text).matchAll(re)].map(m=>m[0].trim());
+}
+function parsePrescription(allText){
+  const patterns=[
+    /Prescribed\s+dose[^\d]*(\d+(?:\.\d+)?)\s*cGy\s*x\s*(\d+)\s*fx/i,
+    /(\d+(?:\.\d+)?)\s*Gy\s*x\s*(\d+)\s*Fx/i,
+    /(\d+(?:\.\d+)?)\s*cGy\s*x\s*(\d+)\s*fx\s*=\s*(\d+(?:\.\d+)?)\s*cGy/i
+  ];
+  for(const re of patterns){
+    const m=allText.match(re);
+    if(m){
+      let perFx=Number(m[1]);
+      if(/cGy/i.test(m[0]))perFx/=100;
+      const fx=Number(m[2]);
+      return {dose:perFx*fx,fractions:fx,perFx};
+    }
+  }
+  const fxMatch=allText.match(/Number\s+of\s+fractions[^\d]*(\d+)/i);
+  const doseMatch=allText.match(/Prescribed\s+dose[^\d]*(\d+(?:\.\d+)?)\s*cGy/i);
+  if(fxMatch&&doseMatch)return {dose:Number(doseMatch[1])/100,fractions:Number(fxMatch[1]),perFx:Number(doseMatch[1])/100/Number(fxMatch[1])};
+  return null;
+}
+function parseVelocityText(text){
+  const out={};
+  const lines=String(text).split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  for(const structure of knownPdfStructures){
+    const aliases=[structure,structure.replace('_',' ')];
+    for(const line of lines){
+      if(!aliases.some(a=>line.toLowerCase().includes(a.toLowerCase())))continue;
+      const nums=numbersFromLine(line);
+      // Velocity rows normally end with Volume, Min, Mean, Max.
+      if(nums.length>=4){
+        const last=nums.slice(-4);
+        const min=last[1],mean=last[2],max=last[3];
+        if(max>=0&&max<500){
+          out[structure]={name:structure,mean,max,min,source:'Velocity cumulative'};
+          break;
+        }
+      }
+    }
+  }
+  return out;
+}
+function parseRaystationRoiText(text){
+  const out={};
+  const lines=String(text).split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  for(const structure of knownPdfStructures){
+    for(const line of lines){
+      if(!line.toLowerCase().includes(structure.toLowerCase().replace('_',' ')) &&
+         !line.toLowerCase().includes(structure.toLowerCase()))continue;
+      const nums=numbersFromLine(line);
+      // RayStation ROI statistics: volume, D99, D98, D95, Average, D50, D2, D1 in cGy.
+      if(nums.length>=8){
+        const vals=nums.slice(-8);
+        const average=vals[4]/100;
+        const d2=vals[6]/100;
+        const d1=vals[7]/100;
+        if(d1>=0&&d1<500){
+          out[structure]={name:structure,mean:average,max:d1,d2,source:'RayStation current course'};
+          break;
+        }
+      }
+    }
+  }
+  return out;
+}
+function parseClinicalGoals(text){
+  const goals={};
+  const lines=String(text).split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  const structures=['SpinalCanal','Esophagus','Heart','Airway','Total Lung'];
+  for(let i=0;i<lines.length;i++){
+    const line=lines[i];
+    const structure=structures.find(s=>line.toLowerCase().includes(s.toLowerCase()));
+    if(!structure)continue;
+    const doseMatch=line.match(/At\s+most\s+(\d+(?:\.\d+)?)\s*cGy\s+dose\s+at\s+(\d+(?:\.\d+)?)\s*cm/i);
+    const valueNums=numbersFromLine(line);
+    if(doseMatch){
+      const limit=Number(doseMatch[1])/100;
+      const volume=Number(doseMatch[2]);
+      const achieved=valueNums.length?valueNums[valueNums.length-1]/100:null;
+      if(!goals[structure])goals[structure]=[];
+      goals[structure].push({volume,limit,achieved});
+    }
+  }
+  return goals;
+}
+function mergeDoseObjects(target,source){
+  Object.entries(source).forEach(([key,value])=>{
+    const canonical=normalizePdfName(key);
+    target[canonical]={...(target[canonical]||{}),...value,name:canonical};
+  });
+}
+async function analyzeReirrPdf(){
+  const file=pdfState.file;
+  if(!file)return;
+  try{
+    await waitForPdfJs();
+    setPdfProgress(2,'Opening PDF…');
+    showPdfMessage('Analyzing the PDF locally. Image-based pages require OCR and may take several minutes.','info');
+    const bytes=await file.arrayBuffer();
+    const pdf=await window.pdfjsLib.getDocument({data:bytes}).promise;
+    const pageTexts=[];
+    const ocrPages={};
+    const likelyOcrPages=new Set([1,2,4,6,8,9,11]);
+
+    for(let i=1;i<=pdf.numPages;i++){
+      const page=await pdf.getPage(i);
+      setPdfProgress(5+5*(i/pdf.numPages),`Reading PDF page ${i} of ${pdf.numPages}…`);
+      const text=await extractPdfText(page);
+      pageTexts[i]=text;
+    }
+
+    // OCR the key Velocity and RayStation report pages when embedded text is unavailable.
+    const pagesToOcr=[...likelyOcrPages].filter(i=>i<=pdf.numPages && (pageTexts[i]||'').length<250);
+    for(let index=0;index<pagesToOcr.length;index++){
+      const pageno=pagesToOcr[index];
+      const page=await pdf.getPage(pageno);
+      const canvas=await renderPdfPage(page,pageno<=2?2.1:1.7);
+      ocrPages[pageno]=await ocrCanvas(canvas,index+1,pagesToOcr.length);
+    }
+
+    setPdfProgress(84,'Extracting prescription and organ doses…');
+    const combined=pageTexts.map((t,i)=>(t||'')+'\n'+(ocrPages[i]||'')).join('\n');
+    const prescription=parsePrescription(combined);
+    pdfState.prescription=prescription?.dose||null;
+    pdfState.fractions=prescription?.fractions||null;
+
+    pdfState.current={};pdfState.cumulative={};pdfState.goals={};
+    const velocityText=[1,2].map(i=>(pageTexts[i]||'')+'\n'+(ocrPages[i]||'')).join('\n');
+    mergeDoseObjects(pdfState.cumulative,parseVelocityText(velocityText));
+
+    const rayText=[8,9].map(i=>(pageTexts[i]||'')+'\n'+(ocrPages[i]||'')).join('\n');
+    mergeDoseObjects(pdfState.current,parseRaystationRoiText(rayText));
+
+    const goalText=(pageTexts[11]||'')+'\n'+(ocrPages[11]||'');
+    pdfState.goals=parseClinicalGoals(goalText);
+
+    // Supplement from DoseCHECK universal metrics if RayStation extraction is sparse.
+    const doseCheckText=pageTexts.slice(15).join('\n');
+    const dcLines=doseCheckText.split(/\r?\n/);
+    for(const structure of knownPdfStructures){
+      if(pdfState.current[structure])continue;
+      const line=dcLines.find(x=>x.toLowerCase().includes(structure.toLowerCase().replace('_',' '))||x.toLowerCase().includes(structure.toLowerCase()));
+      if(!line)continue;
+      const nums=numbersFromLine(line);
+      if(nums.length>=4){
+        // Typical universal metrics sequence includes TPS mean and TPS max.
+        const plausible=nums.filter(x=>x>=0&&x<200);
+        if(plausible.length>=2){
+          pdfState.current[structure]={name:structure,mean:plausible[0],max:plausible[plausible.length>=4?3:1],source:'DoseCHECK current course'};
+        }
+      }
+    }
+
+    buildPdfReviewRows();
+    setPdfProgress(100,'Analysis complete');
+    showPdfMessage(
+      `Detected ${pdfState.fractions||'an unknown number of'} fractions, ${Object.keys(pdfState.current).length} current-course structures, and ${Object.keys(pdfState.cumulative).length} cumulative structures. Review all extracted values before comparison.`,
+      'success'
+    );
+    document.getElementById('pdfSummary').hidden=false;
+    document.getElementById('pdfPrescription').textContent=pdfState.prescription?`${pdfState.prescription.toFixed(2)} Gy`:'Not detected';
+    document.getElementById('pdfFractions').textContent=pdfState.fractions||'Not detected';
+    document.getElementById('pdfCurrentCount').textContent=Object.keys(pdfState.current).length;
+    document.getElementById('pdfCumulativeCount').textContent=Object.keys(pdfState.cumulative).length;
+    if(pdfState.prescription!==null)document.getElementById('r2Dose').value=pdfState.prescription;
+    if(pdfState.fractions!==null){
+      document.getElementById('r2Fractions').value=pdfState.fractions;
+      calculateReirr();updateTmComparison();
+    }
+  }catch(error){
+    console.error(error);
+    setPdfProgress(0,'Analysis stopped');
+    showPdfMessage(`Could not analyze this PDF: ${error.message}. You can still use the manual reirradiation tool below.`,'error');
+  }
+}
+function buildPdfReviewRows(){
+  const names=[...new Set([...Object.keys(pdfState.current),...Object.keys(pdfState.cumulative)])]
+    .filter(name=>!/(gtv|ctv|external|superior|prev|target|couch)/i.test(name))
+    .sort((a,b)=>a.localeCompare(b));
+  const tmOrgans=[...new Set(data.map(r=>r.organ))].sort((a,b)=>a.localeCompare(b));
+  pdfState.rows=names.map((name,index)=>({
+    id:index,name,include:true,match:defaultTmMatch(name),
+    currentMean:pdfState.current[name]?.mean??null,
+    currentMax:pdfState.current[name]?.max??null,
+    cumulativeMean:pdfState.cumulative[name]?.mean??null,
+    cumulativeMax:pdfState.cumulative[name]?.max??null
+  }));
+  const body=document.getElementById('pdfExtractedRows');
+  body.innerHTML=pdfState.rows.map(row=>`
+    <tr data-pdf-row="${row.id}">
+      <td><input class="pdf-include" type="checkbox" checked></td>
+      <td><strong>${esc(row.name)}</strong></td>
+      <td><select class="pdf-tm-match"><option value="">No match</option>${tmOrgans.map(o=>`<option value="${esc(o)}" ${o===row.match?'selected':''}>${esc(o)}</option>`).join('')}</select></td>
+      <td><input class="pdf-current-mean" type="number" step="0.01" value="${row.currentMean??''}"></td>
+      <td><input class="pdf-current-max" type="number" step="0.01" value="${row.currentMax??''}"></td>
+      <td><input class="pdf-cumulative-mean" type="number" step="0.01" value="${row.cumulativeMean??''}"></td>
+      <td><input class="pdf-cumulative-max" type="number" step="0.01" value="${row.cumulativeMax??''}"></td>
+    </tr>`).join('');
+  document.getElementById('pdfReviewSection').hidden=false;
+}
+function syncPdfRowsFromTable(){
+  document.querySelectorAll('[data-pdf-row]').forEach(tr=>{
+    const row=pdfState.rows[Number(tr.dataset.pdfRow)];
+    row.include=tr.querySelector('.pdf-include').checked;
+    row.match=tr.querySelector('.pdf-tm-match').value;
+    const num=selector=>{
+      const value=tr.querySelector(selector).value;
+      return value===''?null:Number(value);
+    };
+    row.currentMean=num('.pdf-current-mean');
+    row.currentMax=num('.pdf-current-max');
+    row.cumulativeMean=num('.pdf-cumulative-mean');
+    row.cumulativeMax=num('.pdf-cumulative-max');
+  });
+}
+function chooseTmConstraint(organ,fx){
+  const rows=data.filter(r=>r.organ===organ&&r.fractions===fx);
+  if(!rows.length)return null;
+  const point=rows.find(r=>tmNumeric(r.pointMax)!==null);
+  if(point)return {row:point,metric:'Maximum point dose',limit:tmNumeric(point.pointMax),pdfMetric:'Current max / D1',valueKey:'currentMax'};
+  const volume=rows.find(r=>tmNumeric(r.volumeMax)!==null);
+  if(volume)return {row:volume,metric:`Volume dose (${volume.volume||'specified volume'})`,limit:tmNumeric(volume.volumeMax),pdfMetric:null,valueKey:null};
+  return {row:rows[0],metric:'Text-only constraint',limit:null,pdfMetric:null,valueKey:null};
+}
+function runAllPdfComparisons(){
+  syncPdfRowsFromTable();
+  const fx=pdfState.fractions||Number(document.getElementById('r2Fractions').value);
+  pdfState.results=pdfState.rows.filter(r=>r.include).map(row=>{
+    if(!row.match)return {...row,status:'neutral',statusText:'NO MATCH',reason:'No Timmerman organ was matched.'};
+    const constraint=chooseTmConstraint(row.match,fx);
+    if(!constraint)return {...row,status:'neutral',statusText:'NO LIMIT',reason:`No Timmerman row is available for ${fx} fractions.`};
+    if(constraint.limit===null)return {...row,constraint,status:'caution',statusText:'NOT COMPARABLE',reason:'The Timmerman row is text-only or has no numeric dose limit.'};
+    if(!constraint.valueKey)return {...row,constraint,status:'caution',statusText:'METRIC NOT AVAILABLE',reason:`The report does not provide the required ${constraint.metric} metric in a directly comparable form.`};
+    const value=row[constraint.valueKey];
+    if(!(value>=0))return {...row,constraint,status:'caution',statusText:'METRIC NOT AVAILABLE',reason:`The PDF did not provide ${constraint.pdfMetric}.`};
+    const pass=value<=constraint.limit;
+    return {...row,constraint,value,status:pass?'pass':'fail',statusText:pass?'PASS':'EXCEEDS',reason:pass?`${value.toFixed(2)} Gy is within the ${constraint.limit.toFixed(2)} Gy limit.`:`${value.toFixed(2)} Gy exceeds the ${constraint.limit.toFixed(2)} Gy limit by ${(value-constraint.limit).toFixed(2)} Gy.`};
+  });
+  renderPdfComparison();
+}
+function renderPdfComparison(){
+  const body=document.getElementById('pdfComparisonRows');
+  body.innerHTML=pdfState.results.map(result=>{
+    const constraint=result.constraint;
+    const cumulative=result.cumulativeMax!==null?`${result.cumulativeMax.toFixed(2)} Gy maximum`:(result.cumulativeMean!==null?`${result.cumulativeMean.toFixed(2)} Gy mean`:'Not reported');
+    return `<tr>
+      <td><strong>${esc(result.name)}</strong><br><small>${esc(result.match||'Unmatched')}</small></td>
+      <td>${esc(constraint?.pdfMetric||'—')}</td>
+      <td>${result.value!==undefined?`${result.value.toFixed(2)} Gy`:'—'}</td>
+      <td>${esc(constraint?.metric||'—')}</td>
+      <td>${constraint?.limit!==undefined&&constraint?.limit!==null?`${constraint.limit.toFixed(2)} Gy`:'—'}</td>
+      <td><span class="status-pill ${result.status}">${result.statusText}</span><br><small>${esc(result.reason)}</small></td>
+      <td>${esc(cumulative)}<br><small>Clinical review only</small></td>
+    </tr>`;
+  }).join('');
+  const count=status=>pdfState.results.filter(r=>r.status===status).length;
+  document.getElementById('pdfPassCount').textContent=count('pass');
+  document.getElementById('pdfFailCount').textContent=count('fail');
+  document.getElementById('pdfCautionCount').textContent=count('caution');
+  document.getElementById('pdfNoMatchCount').textContent=count('neutral');
+  document.getElementById('pdfComparisonSection').hidden=false;
+  document.getElementById('pdfComparisonSection').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function downloadPdfResults(){
+  if(!pdfState.results.length)return;
+  const headers=['PDF structure','Timmerman match','Fractions','PDF metric','PDF value Gy','Timmerman metric','Limit Gy','Result','Explanation','Cumulative mean Gy','Cumulative max Gy'];
+  const rows=pdfState.results.map(r=>[
+    r.name,r.match,pdfState.fractions||'',r.constraint?.pdfMetric||'',r.value??'',r.constraint?.metric||'',r.constraint?.limit??'',r.statusText,r.reason,r.cumulativeMean??'',r.cumulativeMax??''
+  ]);
+  const csv=[headers,...rows].map(row=>row.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download='reirradiation_timmerman_comparison.csv';a.click();
+}
+
+document.getElementById('chooseReirrPdf')?.addEventListener('click',()=>document.getElementById('reirrPdfFile').click());
+document.getElementById('reirrPdfFile')?.addEventListener('change',event=>{
+  const file=event.target.files?.[0];
+  pdfState.file=file||null;
+  document.getElementById('reirrPdfName').textContent=file?file.name:'No PDF selected';
+  document.getElementById('analyzeReirrPdf').disabled=!file;
+  document.getElementById('pdfReviewSection').hidden=true;
+  document.getElementById('pdfComparisonSection').hidden=true;
+});
+document.getElementById('analyzeReirrPdf')?.addEventListener('click',analyzeReirrPdf);
+document.getElementById('runPdfComparison')?.addEventListener('click',runAllPdfComparisons);
+document.getElementById('downloadPdfComparisonCsv')?.addEventListener('click',downloadPdfResults);

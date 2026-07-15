@@ -109,3 +109,19 @@ input,select{width:100%;border:1px solid #cfd8e3;border-radius:11px;padding:12px
 .practical-guidance{margin-top:16px;background:#f6f9fc;border:1px solid var(--line);border-radius:14px;padding:16px}
 .practical-guidance h4{margin:0 0 10px}.practical-guidance ol{margin:0;padding-left:21px;color:#4f6074}.practical-guidance li{margin:7px 0;line-height:1.5}
 @media(max-width:900px){.timmerman-controls,.constraint-context,.compliance-results{grid-template-columns:1fr}}
+
+
+/* PDF-assisted reirradiation workflow */
+.pdf-upload-card,.pdf-review-card,.pdf-comparison-card{padding:22px;margin-bottom:18px}
+.privacy-badge{display:inline-flex;align-items:center;border-radius:999px;padding:8px 12px;background:#e9f5ee;color:#2f6b42;font-size:12px;font-weight:800}
+.pdf-upload-zone{display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center;border:2px dashed #c7d5e3;border-radius:16px;padding:20px;background:#f9fbfd}
+.pdf-upload-zone p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.upload-button,.analyze-button{border:0;border-radius:11px;padding:12px 16px;font-weight:800;cursor:pointer}
+.upload-button{background:#e8f1fa;color:#0f4c81}.analyze-button{background:#0f4c81;color:#fff}.analyze-button:disabled{opacity:.45;cursor:not-allowed}
+.pdf-progress-wrap{display:flex;align-items:center;gap:12px;margin-top:15px}.pdf-progress-track{height:10px;flex:1;background:#e8edf3;border-radius:999px;overflow:hidden}.pdf-progress-bar{height:100%;width:0;background:linear-gradient(90deg,#0f4c81,#4e9dd4);transition:width .2s}.pdf-progress-wrap span{font-size:12px;color:var(--muted);min-width:180px}
+.pdf-message{margin-top:14px;border-radius:12px;padding:13px;line-height:1.5}.pdf-message.info{background:#eef5fb;color:#31566f}.pdf-message.error{background:#fff0ef;color:#8b2820}.pdf-message.success{background:#edf8f1;color:#235b38}
+.pdf-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}.pdf-summary article{background:#f7fafc;border:1px solid var(--line);border-radius:13px;padding:14px}.pdf-summary span{display:block;color:var(--muted);font-size:12px;text-transform:uppercase;font-weight:800;margin-bottom:7px}.pdf-summary strong{font-size:20px}
+.pdf-review-table input[type="number"]{min-width:100px;padding:8px}.pdf-review-table select{min-width:190px;padding:8px}.pdf-review-table input[type="checkbox"]{width:18px;height:18px}
+.comparison-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}.comparison-summary article{border-radius:14px;padding:15px}.comparison-summary span{display:block;font-size:12px;text-transform:uppercase;font-weight:800;margin-bottom:6px}.comparison-summary strong{font-size:26px}.comparison-summary .pass{background:#edf8f1;color:#235b38}.comparison-summary .fail{background:#fff0ef;color:#8b2820}.comparison-summary .caution{background:#fff8e8;color:#735713}.comparison-summary .neutral{background:#f1f4f7;color:#526276}
+.status-pill{display:inline-flex;border-radius:999px;padding:6px 9px;font-size:11px;font-weight:900}.status-pill.pass{background:#dff3e6;color:#23603a}.status-pill.fail{background:#f8deda;color:#8b2820}.status-pill.caution{background:#f8edca;color:#6f5615}.status-pill.neutral{background:#edf1f5;color:#5b697a}
+@media(max-width:900px){.pdf-upload-zone{grid-template-columns:1fr}.pdf-summary,.comparison-summary{grid-template-columns:repeat(2,1fr)}}@media(max-width:560px){.pdf-summary,.comparison-summary{grid-template-columns:1fr}}
